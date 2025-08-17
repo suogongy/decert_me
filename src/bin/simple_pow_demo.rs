@@ -1,3 +1,21 @@
+/**
+ * 
+ * 实践 POW， 编写程序（编程语言不限）用自己的昵称 + nonce，不断修改nonce 进行 sha256 Hash 运算：
+ * 直到满足 4 个 0 开头的哈希值，打印出花费的时间、Hash 的内容及Hash值。
+ * 再次运算直到满足 5 个 0 开头的哈希值，打印出花费的时间、Hash 的内容及Hash值
+ * 
+ * 找到4个0开头的哈希值:
+ * 花费时间: 98.9631ms
+ * nickname: decertme001-rudy, nonce: 29611
+ * 哈希值: 0000ca063f8672d0bcdc3bdc75593be0ab60d8bacba98a95151bb904875393e3
+ * 
+ * 开始寻找5个0开头的哈希值...
+ * 找到5个0开头的哈希值:
+ * 花费时间: 1.7714642s
+ * nickname: decertme001-rudy, nonce: 528982
+ * 哈希值: 00000500d891fd1f65bebd523abff437742bbb80d74d83c1cbb8154de24d5fdc
+ */
+
 use sha2::{Sha256, Digest};
 use std::time::Instant;
 
