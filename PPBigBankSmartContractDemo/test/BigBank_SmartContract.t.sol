@@ -62,16 +62,9 @@ contract BankTest is Test {
         
         console2.log("BankTest: User1 deposited 5 ether");
 
-        uint256 contractBalance = address(bank).balance;
-        console2.log("BankTest: Contract balance: %e ether", contractBalance);
-        
         // 将Bank合约的所有者转移给receiver，因为它可以接收以太币
         vm.prank(owner);
         bank.transferOwnership(address(receiver));
-        
-        // 确保Bank合约本身有足够的以太币进行转账
-        vm.deal(address(bank), contractBalance);
-        console2.log("BankTest: Bank contract balance after vm.deal: %e ether", address(bank).balance);
 
         // receiver作为所有者提取资金
         vm.startPrank(address(receiver));
@@ -316,13 +309,6 @@ contract AdminTest is Test {
         vm.prank(bank.owner());
         bank.transferOwnership(address(adminContract));
         console2.log("AdminTest: Transferred bank ownership to admin contract");
-
-        uint256 contractBalance = address(bank).balance;
-        console2.log("AdminTest: Bank contract balance: %e ether", contractBalance);
-
-        // 确保Bank合约有足够的余额
-        vm.deal(address(bank), contractBalance);
-        console2.log("AdminTest: Bank contract balance after vm.deal: %e ether", address(bank).balance);
 
         // 管理员提取资金
         vm.startPrank(admin);

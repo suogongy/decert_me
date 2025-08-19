@@ -1,0 +1,33 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Foundry default output directory
+out/
+broadcast/
+
+# Foundry cache
+cache/
+cache_forge/
+
+# Dependency directory
+lib/
+
+# Environment variables
+.env
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+
+# VS Code
+.vscode/
+
+# Artifacts
+*.svg
+
+# Logs
+*.log
