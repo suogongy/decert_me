@@ -45,9 +45,7 @@ contract Bank is IBank {
         console2.log("Bank: Contract balance after withdrawal: %e ether", address(this).balance);
     }
 
-    function getDepositByAddress(
-        address user
-    ) external view override returns (uint) {
+    function getDepositByAddress(address user) external view override returns (uint) {
         console2.log("Bank: getDepositByAddress called for user: %s", user);
         require(user != address(0), "Invalid address");
         // 移除了存款必须大于0的检查，这样在提款后可以查询到0余额

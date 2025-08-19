@@ -284,10 +284,8 @@ contract AdminTest is Test {
     Admin public adminContract;
     address public admin;
     address public user1;
-    Receiver public receiver;
 
     function setUp() public {
-        receiver = new Receiver();
         bank = new Bank();
         bigBank = new BigBank();
         adminContract = new Admin();
@@ -296,12 +294,10 @@ contract AdminTest is Test {
         
         // 给账户一些初始余额
         vm.deal(admin, 100 ether);
-        vm.deal(address(receiver), 100 ether);
         
         console2.log("AdminTest: Setup completed");
         console2.log("AdminTest: Admin address: %s", admin);
         console2.log("AdminTest: User1 address: %s", user1);
-        console2.log("AdminTest: Receiver address: %s", address(receiver));
     }
 
     // 测试管理员提取Bank合约资金
