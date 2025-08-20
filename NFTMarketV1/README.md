@@ -143,6 +143,25 @@ sequenceDiagram
     Note over M,N: NFT transferred back to seller
 ```
 
+### Deployment with Foundry
+
+To deploy the NFTMarket contract, you can use the provided deployment script:
+
+```bash
+# Local dry-run simulation
+forge script script/NFTMarket.s.sol:NFTMarketScript --sig "run()"
+
+# Deploy to local testnet (e.g. Anvil)
+forge script script/NFTMarket.s.sol:NFTMarketScript --sig "deployToLocalhost()" \
+  --rpc-url http://localhost:8545 \
+  --private-key YOUR_PRIVATE_KEY
+
+# Deploy to Goerli testnet
+forge script script/NFTMarket.s.sol:NFTMarketScript --sig "deployToGoerli()" \
+  --rpc-url https://goerli.infura.io/v3/YOUR_INFURA_KEY \
+  --private-key YOUR_PRIVATE_KEY
+```
+
 ### Documentation
 
 For more information about the Foundry development framework used in this project, visit: https://book.getfoundry.sh/

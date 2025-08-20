@@ -7,36 +7,10 @@ import "../src/ExtendedERC20.sol";
 import "../src/SimpleERC721.sol";
 import "../src/NFTMarket.sol";
 
-contract TestTokenReceiver is ITokenReceiver {
-    NFTMarket public market;
-    ExtendedERC20 public token;
-    
-    constructor(NFTMarket _market, ExtendedERC20 _token) {
-        market = _market;
-        token = _token;
-        console.log("TestTokenReceiver: Contract deployed");
-    }
-    
-    function onTokensReceived(address sender, address, uint256 amount, bytes calldata data) external override {
-        console.log("TestTokenReceiver: onTokensReceived() called by %s with amount %d", sender, amount);
-        // When tokens are received, try to buy an NFT with them
-        uint256 listingId = abi.decode(data, (uint256));
-        console.log("TestTokenReceiver: Decoded listingId: %d", listingId);
-        // Approve the market to spend our tokens
-        console.log("TestTokenReceiver: Approving market to spend tokens");
-        token.approve(address(market), amount);
-        // Buy the NFT with tokens
-        console.log("TestTokenReceiver: Buying NFT with tokens");
-        market.buyNFTWithToken(listingId, address(token), amount);
-        console.log("TestTokenReceiver: NFT purchase completed");
-    }
-}
-
 contract NFTMarketTest is Test {
     ExtendedERC20 public token;
     SimpleERC721 public nft;
     NFTMarket public market;
-    TestTokenReceiver public receiver;
     
     address public seller = address(1);
     address public buyer = address(2);
@@ -49,7 +23,6 @@ contract NFTMarketTest is Test {
         token = new ExtendedERC20("TestToken", "TST");
         nft = new SimpleERC721("TestNFT", "TNFT");
         market = new NFTMarket();
-        receiver = new TestTokenReceiver(market, token);
         
         // Mint NFT to seller
         vm.label(seller, "Seller");
@@ -129,31 +102,21 @@ contract NFTMarketTest is Test {
         vm.prank(seller);
         market.listNFT(address(nft), tokenId, tokenAmount);
         
-        // Mint tokens to receiver so it can transfer them to seller
-        token.mint(address(receiver), tokenAmount);
-        
-        // Receiver approves market to transfer tokens
-        vm.prank(address(receiver));
-        token.approve(address(market), tokenAmount);
-        
         // Check initial state
         assertEq(nft.ownerOf(tokenId), address(market));
         assertEq(token.balanceOf(seller), 0);
-        assertEq(token.balanceOf(address(receiver)), tokenAmount);
         assertEq(token.balanceOf(buyer), tokenAmount);
         
-        // Buyer transfers tokens to receiver, which triggers purchase
+        // Buyer transfers tokens to market, which triggers purchase via callback
         vm.prank(buyer);
-        token.transferWithCallback(address(receiver), tokenAmount, abi.encode(uint256(0)));
+        token.transferWithCallback(address(market), tokenAmount, abi.encode(uint256(0)));
         
         // Check final state
-        // The receiver is the one who actually bought the NFT (through the callback)
-        assertEq(nft.ownerOf(tokenId), address(receiver));
+        // The buyer is the one who actually bought the NFT (through the callback)
+        assertEq(nft.ownerOf(tokenId), buyer);
         assertEq(token.balanceOf(seller), tokenAmount);
-        // Buyer should have 0 tokens now (sent to receiver)
+        // Buyer should have 0 tokens now (sent to market)
         assertEq(token.balanceOf(buyer), 0);
-        // Receiver should still have tokenAmount (it had tokenAmount and sent tokenAmount to seller)
-        assertEq(token.balanceOf(address(receiver)), tokenAmount);
         console.log("NFTMarketTest: testBuyNFTWithToken() passed");
     }
     
