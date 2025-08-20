@@ -10,6 +10,8 @@ This project implements a complete NFT marketplace on Ethereum with the followin
 
 3. **NFTMarket.sol**: The main marketplace contract for listing, buying, and selling NFTs with ETH or ERC20 tokens
 
+4. **ITokenReceiver.sol**: Interface for token receiver callback functionality
+
 ### Key Features
 
 - List NFTs for sale with fixed prices
@@ -22,8 +24,11 @@ This project implements a complete NFT marketplace on Ethereum with the followin
 ```
 src/
 ├── SimpleERC721.sol       # ERC721 NFT implementation
+│   └── SimpleERC721       # Main contract implementing ERC721 standard
 ├── ExtendedERC20.sol      # ERC20 token with callback support
+│   └── ExtendedERC20      # Main contract implementing extended ERC20 standard with callback
 ├── NFTMarket.sol          # Main marketplace contract
+│   └── NFTMarket          # Main contract implementing NFT marketplace functionality
 ├── IERC721.sol            # ERC721 interface
 ├── IExtendedERC20.sol     # Extended ERC20 interface
 ├── ITokenReceiver.sol     # Token receiver interface
@@ -41,15 +46,13 @@ sequenceDiagram
     participant E as ExtendedERC20
     participant N as SimpleERC721
     participant M as NFTMarket
-    participant R as TestTokenReceiver
     participant S as Seller
     participant B as Buyer
 
     T->>E: new ExtendedERC20("TestToken", "TST")
     T->>N: new SimpleERC721("TestNFT", "TNFT")
     T->>M: new NFTMarket()
-    T->>R: new TestTokenReceiver(market, token)
-    Note over T,R: Contract deployment
+    Note over T,M: Contract deployment
 
     T->>N: mint(S, tokenId)
     Note over T,N: Mint NFT to seller
@@ -97,7 +100,6 @@ The following diagram shows the sequence of operations when buying an NFT with E
 sequenceDiagram
     participant S as Seller
     participant B as Buyer
-    participant T as TestTokenReceiver
     participant M as NFTMarket
     participant N as SimpleERC721
     participant E as ExtendedERC20
@@ -106,21 +108,14 @@ sequenceDiagram
     M->>N: transferFrom(S, M, tokenId)
     Note over M,N: NFT transferred to market
 
-    T->>E: mint(T, tokenAmount)
-    Note over T,E: Mint tokens for receiver
+    B->>E: transferWithCallback(M, tokenAmount, listingId)
+    E->>M: onTokensReceived(B, amount, data)
+    Note over E,M: Token transfer triggers callback
 
-    T->>E: approve(M, tokenAmount)
-    Note over T,M: Approve market to spend tokens
+    M->>N: transferFrom(M, B, tokenId)
+    Note over M,N: NFT transferred to buyer
 
-    B->>E: transferWithCallback(T, tokenAmount, listingId)
-    E->>T: onTokensReceived(B, amount, data)
-    Note over E,T: Token transfer triggers callback
-
-    T->>M: buyNFTWithToken(listingId, tokenAddress, amount)
-    M->>N: transferFrom(M, T, tokenId)
-    Note over M,N: NFT transferred to receiver
-
-    M->>E: transferFrom(T, S, amount)
+    M->>E: transfer(B, S, amount)
     Note over M,E: Payment transferred to seller
 ```
 
