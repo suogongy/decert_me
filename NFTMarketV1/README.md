@@ -1,66 +1,148 @@
-## Foundry
+## NFTMarket V1
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+This project implements a complete NFT marketplace on Ethereum with the following core contracts:
 
-Foundry consists of:
+### Core Contracts
 
-- **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
-- **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
-- **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
-- **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+1. **SimpleERC721.sol**: A simplified implementation of the ERC721 Non-Fungible Token Standard
 
-## Documentation
+2. **ExtendedERC20.sol**: An extended implementation of the ERC20 Fungible Token Standard with callback support
 
-https://book.getfoundry.sh/
+3. **NFTMarket.sol**: The main marketplace contract for listing, buying, and selling NFTs with ETH or ERC20 tokens
 
-## Usage
+### Key Features
 
-### Build
+- List NFTs for sale with fixed prices
+- Buy NFTs with ETH or ERC20 tokens
+- Support for token callback mechanisms
+- Comprehensive testing with detailed console logs
 
-```shell
-$ forge build
+### Project Structure
+
+```
+src/
+├── SimpleERC721.sol       # ERC721 NFT implementation
+├── ExtendedERC20.sol      # ERC20 token with callback support
+├── NFTMarket.sol          # Main marketplace contract
+├── IERC721.sol            # ERC721 interface
+├── IExtendedERC20.sol     # Extended ERC20 interface
+├── ITokenReceiver.sol     # Token receiver interface
+test/
+├── NFTMarket.t.sol        # Test suite for all contracts
 ```
 
-### Test
+### Test Setup Sequence
 
-```shell
-$ forge test
+The following diagram shows the sequence of operations in the test setup phase:
+
+```mermaid
+sequenceDiagram
+    participant T as NFTMarketTest
+    participant E as ExtendedERC20
+    participant N as SimpleERC721
+    participant M as NFTMarket
+    participant R as TestTokenReceiver
+    participant S as Seller
+    participant B as Buyer
+
+    T->>E: new ExtendedERC20("TestToken", "TST")
+    T->>N: new SimpleERC721("TestNFT", "TNFT")
+    T->>M: new NFTMarket()
+    T->>R: new TestTokenReceiver(market, token)
+    Note over T,R: Contract deployment
+
+    T->>N: mint(S, tokenId)
+    Note over T,N: Mint NFT to seller
+
+    T->>E: mint(B, tokenAmount)
+    Note over T,E: Mint tokens to buyer
+
+    T->>S: Set up seller
+    S->>N: approve(market, tokenId)
+    Note over S,N: Approve market to transfer NFT
+
+    T->>B: Set up buyer
+    B->>E: approve(market, tokenAmount)
+    Note over B,E: Approve market to transfer tokens
 ```
 
-### Format
+### TestBuyNFTWithETH Sequence
 
-```shell
-$ forge fmt
+The following diagram shows the sequence of operations when buying an NFT with ETH:
+
+```mermaid
+sequenceDiagram
+    participant S as Seller
+    participant B as Buyer
+    participant M as NFTMarket
+    participant N as SimpleERC721
+
+    S->>M: listNFT(tokenAddress, tokenId, price)
+    M->>N: transferFrom(S, M, tokenId)
+    Note over M,N: NFT transferred to market
+
+    B->>M: buyNFT{value: price}(listingId)
+    M->>N: transferFrom(M, B, tokenId)
+    Note over M,N: NFT transferred to buyer
+
+    M->>S: Transfer ETH to seller
+    Note over M,S: Payment transferred to seller
 ```
 
-### Gas Snapshots
+### TestBuyNFTWithToken Sequence
 
-```shell
-$ forge snapshot
+The following diagram shows the sequence of operations when buying an NFT with ERC20 tokens:
+
+```mermaid
+sequenceDiagram
+    participant S as Seller
+    participant B as Buyer
+    participant T as TestTokenReceiver
+    participant M as NFTMarket
+    participant N as SimpleERC721
+    participant E as ExtendedERC20
+
+    S->>M: listNFT(tokenAddress, tokenId, price)
+    M->>N: transferFrom(S, M, tokenId)
+    Note over M,N: NFT transferred to market
+
+    T->>E: mint(T, tokenAmount)
+    Note over T,E: Mint tokens for receiver
+
+    T->>E: approve(M, tokenAmount)
+    Note over T,M: Approve market to spend tokens
+
+    B->>E: transferWithCallback(T, tokenAmount, listingId)
+    E->>T: onTokensReceived(B, amount, data)
+    Note over E,T: Token transfer triggers callback
+
+    T->>M: buyNFTWithToken(listingId, tokenAddress, amount)
+    M->>N: transferFrom(M, T, tokenId)
+    Note over M,N: NFT transferred to receiver
+
+    M->>E: transferFrom(T, S, amount)
+    Note over M,E: Payment transferred to seller
 ```
 
-### Anvil
+### TestDelistNFT Sequence
 
-```shell
-$ anvil
+The following diagram shows the sequence of operations when delisting an NFT:
+
+```mermaid
+sequenceDiagram
+    participant S as Seller
+    participant M as NFTMarket
+    participant N as SimpleERC721
+
+    S->>M: listNFT(tokenAddress, tokenId, price)
+    M->>N: transferFrom(S, M, tokenId)
+    Note over M,N: NFT transferred to market
+
+    S->>M: delistNFT(listingId)
+    M->>N: transferFrom(M, S, tokenId)
+    Note over M,N: NFT transferred back to seller
 ```
 
-### Deploy
+### Documentation
 
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
-
-### Cast
-
-```shell
-$ cast <subcommand>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
-```
+For more information about the Foundry development framework used in this project, visit: https://book.getfoundry.sh/

@@ -2,6 +2,7 @@
 pragma solidity ^0.8.13;
 
 import "forge-std/Test.sol";
+import "forge-std/console.sol";
 import "../src/ExtendedERC20.sol";
 import "../src/SimpleERC721.sol";
 import "../src/NFTMarket.sol";
@@ -13,15 +14,21 @@ contract TestTokenReceiver is ITokenReceiver {
     constructor(NFTMarket _market, ExtendedERC20 _token) {
         market = _market;
         token = _token;
+        console.log("TestTokenReceiver: Contract deployed");
     }
     
     function onTokensReceived(address sender, address, uint256 amount, bytes calldata data) external override {
+        console.log("TestTokenReceiver: onTokensReceived() called by %s with amount %d", sender, amount);
         // When tokens are received, try to buy an NFT with them
         uint256 listingId = abi.decode(data, (uint256));
+        console.log("TestTokenReceiver: Decoded listingId: %d", listingId);
         // Approve the market to spend our tokens
+        console.log("TestTokenReceiver: Approving market to spend tokens");
         token.approve(address(market), amount);
         // Buy the NFT with tokens
+        console.log("TestTokenReceiver: Buying NFT with tokens");
         market.buyNFTWithToken(listingId, address(token), amount);
+        console.log("TestTokenReceiver: NFT purchase completed");
     }
 }
 
@@ -38,27 +45,36 @@ contract NFTMarketTest is Test {
     uint256 public tokenAmount = 100 * 10**18; // 100 tokens with 18 decimals
     
     function setUp() public {
+        console.log("NFTMarketTest: Setting up test environment");
         token = new ExtendedERC20("TestToken", "TST");
         nft = new SimpleERC721("TestNFT", "TNFT");
         market = new NFTMarket();
         receiver = new TestTokenReceiver(market, token);
         
         // Mint NFT to seller
+        vm.label(seller, "Seller");
         nft.mint(seller, tokenId);
+        console.log("NFTMarketTest: Minted NFT %d to seller", tokenId);
         
         // Mint tokens to buyer
+        vm.label(buyer, "Buyer");
         token.mint(buyer, tokenAmount);
+        console.log("NFTMarketTest: Minted %d tokens to buyer", tokenAmount);
         
         // Approve market to transfer NFT from seller
         vm.prank(seller);
         nft.approve(address(market), tokenId);
+        console.log("NFTMarketTest: Approved market to transfer NFT from seller");
         
         // Approve market to transfer tokens from buyer
         vm.prank(buyer);
         token.approve(address(market), tokenAmount);
+        console.log("NFTMarketTest: Approved market to transfer tokens from buyer");
+        console.log("NFTMarketTest: Test environment setup completed");
     }
     
     function testListNFT() public {
+        console.log("NFTMarketTest: Running testListNFT()");
         vm.prank(seller);
         market.listNFT(address(nft), tokenId, price);
         
@@ -70,9 +86,11 @@ contract NFTMarketTest is Test {
         assertEq(sellerAddr, seller);
         assertTrue(active);
         assertEq(nft.ownerOf(tokenId), address(market));
+        console.log("NFTMarketTest: testListNFT() passed");
     }
     
     function testDelistNFT() public {
+        console.log("NFTMarketTest: Running testDelistNFT()");
         // First list an NFT
         vm.prank(seller);
         market.listNFT(address(nft), tokenId, price);
@@ -84,9 +102,11 @@ contract NFTMarketTest is Test {
         (, , , , bool active) = market.listings(0);
         assertFalse(active);
         assertEq(nft.ownerOf(tokenId), seller);
+        console.log("NFTMarketTest: testDelistNFT() passed");
     }
     
     function testBuyNFTWithETH() public {
+        console.log("NFTMarketTest: Running testBuyNFTWithETH()");
         // List an NFT
         vm.prank(seller);
         market.listNFT(address(nft), tokenId, price);
@@ -100,9 +120,11 @@ contract NFTMarketTest is Test {
         assertFalse(active);
         assertEq(nft.ownerOf(tokenId), buyer);
         assertEq(seller.balance, price);
+        console.log("NFTMarketTest: testBuyNFTWithETH() passed");
     }
     
     function testBuyNFTWithToken() public {
+        console.log("NFTMarketTest: Running testBuyNFTWithToken()");
         // List an NFT with token price
         vm.prank(seller);
         market.listNFT(address(nft), tokenId, tokenAmount);
@@ -132,9 +154,11 @@ contract NFTMarketTest is Test {
         assertEq(token.balanceOf(buyer), 0);
         // Receiver should still have tokenAmount (it had tokenAmount and sent tokenAmount to seller)
         assertEq(token.balanceOf(address(receiver)), tokenAmount);
+        console.log("NFTMarketTest: testBuyNFTWithToken() passed");
     }
     
     function testRevertWhenNotSellerDelistsNFT() public {
+        console.log("NFTMarketTest: Running testRevertWhenNotSellerDelistsNFT()");
         // List an NFT
         vm.prank(seller);
         market.listNFT(address(nft), tokenId, price);
@@ -142,9 +166,11 @@ contract NFTMarketTest is Test {
         // Try to delist from non-seller account
         vm.expectRevert(abi.encodeWithSignature("NotSeller(address,uint256)", address(this), uint256(0)));
         market.delistNFT(0);
+        console.log("NFTMarketTest: testRevertWhenNotSellerDelistsNFT() passed");
     }
     
     function testRevertWhenBuyNFTWithInsufficientETH() public {
+        console.log("NFTMarketTest: Running testRevertWhenBuyNFTWithInsufficientETH()");
         // List an NFT
         vm.prank(seller);
         market.listNFT(address(nft), tokenId, price);
@@ -154,5 +180,6 @@ contract NFTMarketTest is Test {
         vm.prank(buyer);
         vm.expectRevert(abi.encodeWithSignature("InsufficientPayment(uint256,uint256)", price - 1, price));
         market.buyNFT{value: price - 1}(0);
+        console.log("NFTMarketTest: testRevertWhenBuyNFTWithInsufficientETH() passed");
     }
 }
