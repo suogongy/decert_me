@@ -153,75 +153,76 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 text-white flex flex-col items-center justify-center p-4">
-      <div className="max-w-md w-full bg-gray-800 rounded-2xl shadow-xl overflow-hidden">
-        <div className="bg-gradient-to-r from-purple-600 to-indigo-600 p-6 text-center">
-          <h1 className="text-3xl font-bold">Web3 Wallet Demo</h1>
-          <p className="text-gray-200 mt-2">Built with Viem and React</p>
+    <div className="min-h-screen bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-100">
+      <div className="container">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold mb-2">Web3 Wallet Demo</h1>
         </div>
         
-        <div className="p-6">
+        <div className="max-w-2xl mx-auto">
           {!account ? (
-            <div className="text-center">
+            <div className="card dark:card-dark text-center py-12">
+              <h2 className="text-xl font-semibold mb-4">Connect Your Wallet</h2>
+              <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">
+                Connect with MetaMask to explore your wallet information 
+              </p>
+              <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto">
+                Interact with the Counter contract
+              </p>
               <button 
                 onClick={connectWallet}
-                className="bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white font-bold py-3 px-6 rounded-full transition duration-300 transform hover:scale-105"
+                className="btn btn-primary mx-auto px-6 py-3"
               >
                 Connect MetaMask Wallet
               </button>
             </div>
           ) : (
             <div>
-              <div className="mb-6">
-                <div className="flex justify-between items-center">
-                  <h2 className="text-xl font-semibold">Wallet Information</h2>
+              <div className="card dark:card-dark">
+                <div className="flex-between">
+                  <h2 className="section-header dark:section-header-dark">Wallet Information</h2>
                   <button 
                     onClick={disconnectWallet}
-                    className="text-sm bg-red-500 hover:bg-red-600 text-white py-1 px-3 rounded transition"
+                    className="btn btn-outline dark:btn-outline-dark text-sm"
                   >
                     Disconnect
                   </button>
                 </div>
                 
-                <div className="mt-4 space-y-3">
-                  <div className="bg-gray-700 p-3 rounded-lg">
-                    <p className="text-gray-400 text-sm">Wallet Address</p>
-                    <p className="font-mono text-sm break-all">{account}</p>
+                <div className="info-grid">
+                  <div className="info-item">
+                    <div className="info-label dark:info-label-dark">Wallet Address</div>
+                    <div className="info-value font-mono text-sm">{account}</div>
                   </div>
                   
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-gray-700 p-3 rounded-lg">
-                      <p className="text-gray-400 text-sm">Network</p>
-                      <p>{network}</p>
-                    </div>
-                    <div className="bg-gray-700 p-3 rounded-lg">
-                      <p className="text-gray-400 text-sm">Chain ID</p>
-                      <p>{chainId}</p>
-                    </div>
+                  <div className="info-item">
+                    <div className="info-label dark:info-label-dark">Network</div>
+                    <div className="info-value">{network}</div>
                   </div>
                   
-                  <div className="bg-gray-700 p-3 rounded-lg">
-                    <p className="text-gray-400 text-sm">ETH Balance</p>
-                    <p>{balance} ETH</p>
+                  <div className="info-item">
+                    <div className="info-label dark:info-label-dark">Chain ID</div>
+                    <div className="info-value">{chainId}</div>
+                  </div>
+                  
+                  <div className="info-item">
+                    <div className="info-label dark:info-label-dark">ETH Balance</div>
+                    <div className="info-value">{balance ? `${parseFloat(balance).toFixed(6)} ETH` : 'Loading...'}</div>
                   </div>
                 </div>
               </div>
               
-              <div className="border-t border-gray-700 pt-6">
-                <h2 className="text-xl font-semibold mb-4">Counter Contract</h2>
-                <div className="bg-gray-700 p-4 rounded-lg text-center">
-                  <p className="text-gray-400">Current Value</p>
-                  <p className="text-4xl font-bold my-3">{count !== null ? count : '...'}</p>
+              <div className="card dark:card-dark">
+                <h2 className="section-header dark:section-header-dark mb-6">Counter Contract</h2>
+                <div className="text-center">
+                  <div className="info-label dark:info-label-dark mb-4">Current Value</div>
+                  <div className="counter-display">{count !== null ? count : '...'}</div>
                   <button 
                     onClick={incrementCounter}
                     disabled={!walletClient}
-                    className={`mt-2 w-full py-2 rounded-lg font-semibold transition ${
-                      walletClient 
-                        ? 'bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600' 
-                        : 'bg-gray-600 cursor-not-allowed'
-                    }`}
+                    className={`btn ${walletClient ? 'btn-secondary' : 'btn-outline dark:btn-outline-dark'} mt-4 px-6 py-3`}
                   >
-                    Increment
+                    {walletClient ? 'Increment Counter' : 'Connecting...'}
                   </button>
                 </div>
               </div>
@@ -229,7 +230,7 @@ function App() {
           )}
         </div>
         
-        <div className="bg-gray-900 p-4 text-center text-gray-500 text-sm">
+        <div className="text-center text-gray-500 dark:text-gray-400 text-sm mt-8">
           <p>Web3 Demo with Viem + React + Tailwind CSS</p>
         </div>
       </div>

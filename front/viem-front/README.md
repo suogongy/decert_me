@@ -2,6 +2,14 @@
 
 This is a simple Web3 demo project implemented with Viem, demonstrating how to connect to MetaMask wallet and display wallet information.
 
+## UI Preview
+
+### Default Page
+![Default Page](docs/default.png)
+
+### Wallet Connected Page
+![Wallet Connected Page](docs/connected.png)
+
 ## Features
 
 - Connect to MetaMask wallet
