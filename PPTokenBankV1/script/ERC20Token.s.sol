@@ -12,8 +12,8 @@ contract ERC20TokenScript is Script {
     function run() public {
         vm.startBroadcast();
 
-        // Deploy token with name "MyToken", symbol "MTK", 18 decimals and 1 million initial supply
-        token = new ERC20Token("MyToken", "MTK", 18, 1_000_000);
+        // Deploy token with name "PPToken", symbol "PPT", 18 decimals and 1 million initial supply
+        token = new ERC20Token("PPToken", "PPT", 18, 1_000_000);
 
         vm.stopBroadcast();
     }

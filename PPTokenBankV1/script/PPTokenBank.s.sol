@@ -11,7 +11,7 @@ contract PPTokenBankScript is Script {
         vm.startBroadcast();
         
         // First deploy a token
-        ERC20Token token = new ERC20Token("Bank Token", "BTK", 18, 1000000);
+        ERC20Token token = new ERC20Token("PPToken", "PPT", 18, 1000000);
         
         // Then deploy the bank with the token
         PPTokenBank bank = new PPTokenBank(address(token));
