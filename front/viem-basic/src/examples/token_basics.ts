@@ -196,143 +196,264 @@ const ERC20_ABI = [{
 		"internalType": "uint256"
 	}],
 	"anonymous": false
-}] as const
+}]
 
-// Account and client setup
-const privateKey = (import.meta.env.VITE_PRIVATE_KEY) as `0x${string}`
-const account = privateKeyToAccount(privateKey)
+// Updated to accept parameters for interactive mode
+export async function runTokenBasics(rpcUrl?: string, privateKey?: string, chainId?: string) {
+  console.log('=== ERC20 Token Operations Demo ===')
+  
+  // Use provided values or fall back to environment variables
+  const finalPrivateKey = (privateKey || import.meta.env.VITE_PRIVATE_KEY || '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80') as `0x${string}`
+  const account = privateKeyToAccount(finalPrivateKey)
+  console.log('Account address:', account.address)
 
-const publicClient = createPublicClient({
-  chain: foundry,
-  transport: http(import.meta.env.VITE_ETHEREUM_RPC_URL)
-})
-
-const walletClient = createWalletClient({
-  chain: foundry,
-  transport: http(import.meta.env.VITE_ETHEREUM_RPC_URL),
-  account
-})
-
-// 1. Token balance query
-async function getTokenBalance() {
-  try {
-    console.log('Getting token information...')
-    
-    // Get token name
-    const name = await publicClient.readContract({
-      address: TOKEN_ADDRESS as `0x${string}`,
-      abi: ERC20_ABI,
-      functionName: 'name',
-    })
-    
-    // Get token symbol
-    const symbol = await publicClient.readContract({
-      address: TOKEN_ADDRESS as `0x${string}`,
-      abi: ERC20_ABI,
-      functionName: 'symbol',
-    })
-    
-    // Get token decimals
-    const decimals = await publicClient.readContract({
-      address: TOKEN_ADDRESS as `0x${string}`,
-      abi: ERC20_ABI,
-      functionName: 'decimals',
-    })
-    
-    // Get account balance
-    const balance = await publicClient.readContract({
-      address: TOKEN_ADDRESS as `0x${string}`,
-      abi: ERC20_ABI,
-      functionName: 'balanceOf',
-      args: [account.address],
-    })
-    
-    console.log(`Token: ${name} (${symbol})`)
-    console.log(`Decimals: ${decimals}`)
-    console.log(`Balance: ${formatEther(balance as bigint)} ${symbol}`)
-    
-    return { symbol, decimals, balance }
-  } catch (error) {
-    console.error('Error getting token balance:', error)
+  if(chainId === undefined){
+    chainId = import.meta.env.VITE_ANVIL_CHAIN
   }
-}
 
-// 2. Token transfer
-async function transferTokens(to: `0x${string}`, amount: bigint) {
-  try {
-    console.log(`Transferring ${formatEther(amount)} tokens to ${to}...`)
-    
-    // Simulate the transaction first
-    const { request } = await publicClient.simulateContract({
-      address: TOKEN_ADDRESS as `0x${string}`,
-      abi: ERC20_ABI,
-      functionName: 'transfer',
-      args: [to, amount],
-      account,
-    })
-    
-    console.log('Transaction simulation successful')
-    
-    // In a real application, you would send the transaction:
-    const hash = await walletClient.writeContract(request)
-    console.log('Transaction hash:', hash)
-    const receipt = await publicClient.waitForTransactionReceipt({ hash })
-    console.log('Transaction confirmed in block:', receipt.blockNumber)
-    
-    console.log('Transfer would be executed in a real application')
-  } catch (error) {
-    console.error('Error transferring tokens:', error)
+  // Determine chain based on chainId
+  let chain
+  if (chainId === '31337') {
+    chain = foundry
+  } else {
+    throw new Error('Invalid chainId')
   }
-}
 
-// 3. Token approval
-async function approveSpender(spender: `0x${string}`, amount: bigint) {
-  try {
-    console.log(`Approving ${formatEther(amount)} tokens for spender ${spender}...`)
-    
-    // Check current allowance
-    const currentAllowance = await publicClient.readContract({
-      address: TOKEN_ADDRESS as `0x${string}`,
-      abi: ERC20_ABI,
-      functionName: 'allowance',
-      args: [account.address, spender],
-    })
-    
-    console.log(`Current allowance: ${formatEther(currentAllowance as bigint)} tokens`)
-    
-    // Simulate the approval transaction
-    const { request } = await publicClient.simulateContract({
-      address: TOKEN_ADDRESS as `0x${string}`,
-      abi: ERC20_ABI,
-      functionName: 'approve',
-      args: [spender, amount],
-      account,
-    })
-    
-    console.log('Approval simulation successful')
-    
-    // In a real application, you would send the transaction:
-    const hash = await walletClient.writeContract(request)
-    console.log('Approval transaction hash:', hash)
-    
-    console.log('Approval would be executed in a real application')
-  } catch (error) {
-    console.error('Error approving spender:', error)
+  // Use provided RPC URL or fall back to environment variable
+  const finalRpcUrl = rpcUrl || import.meta.env.VITE_ETHEREUM_RPC_URL
+  
+  const publicClient = createPublicClient({
+    chain: chain,
+    transport: http(finalRpcUrl)
+  })
+
+  const walletClient = createWalletClient({
+    chain: chain,
+    transport: http(finalRpcUrl),
+    account
+  })
+
+  console.log('Chain:', publicClient.chain.name)
+  console.log('RPC URL:', finalRpcUrl)
+  
+  // Query token balance
+  async function getTokenBalance() {
+    try {
+      const balance = await publicClient.readContract({
+        address: TOKEN_ADDRESS as `0x${string}`,
+        abi: ERC20_ABI,
+        functionName: 'balanceOf',
+        args: [account.address]
+      })
+      
+      const decimals = await publicClient.readContract({
+        address: TOKEN_ADDRESS as `0x${string}`,
+        abi: ERC20_ABI,
+        functionName: 'decimals'
+      })
+      
+      console.log(`Token balance: ${formatEther(balance as bigint)} tokens`)
+      console.log(`Token decimals: ${decimals}`)
+    } catch (error) {
+      console.error('Error getting token balance:', error)
+    }
   }
-}
 
-// Demonstrate all ERC20 operations
-async function demonstrateERC20Operations() {
+  // Transfer tokens to another address
+  async function transferTokens(to: `0x${string}`, amount: bigint) {
+    try {
+      console.log(`\nTransfer ${formatEther(amount)} tokens to ${to}`)
+      
+      // Check balances before transfer
+      const fromBalanceBefore = await publicClient.readContract({
+        address: TOKEN_ADDRESS as `0x${string}`,
+        abi: ERC20_ABI,
+        functionName: 'balanceOf',
+        args: [account.address]
+      })
+      console.log(`From account balance before: ${formatEther(fromBalanceBefore as bigint)} tokens`)
+      
+      let toBalanceBefore;
+      try {
+        toBalanceBefore = await publicClient.readContract({
+          address: TOKEN_ADDRESS as `0x${string}`,
+          abi: ERC20_ABI,
+          functionName: 'balanceOf',
+          args: [to]
+        })
+        console.log(`To account balance before: ${formatEther(toBalanceBefore as bigint)} tokens`)
+      } catch (error) {
+        console.log('Could not retrieve receiver balance before transaction')
+      }
+      
+      // Simulate the transaction first
+      const { request } = await publicClient.simulateContract({
+        address: TOKEN_ADDRESS as `0x${string}`,
+        abi: ERC20_ABI,
+        functionName: 'transfer',
+        args: [to, amount],
+        account,
+      })
+      
+    //   console.log('Transfer simulation successful')
+      
+      // In a real application, you would send the transaction:
+      const hash = await walletClient.writeContract(request)
+      console.log('Transfer transaction hash:', hash)
+      
+      // Wait for transaction confirmation
+      console.log('Waiting for transaction confirmation...')
+      const receipt = await publicClient.waitForTransactionReceipt({ hash })
+      console.log('Transaction confirmed!')
+      console.log('Block number:', receipt.blockNumber)
+      console.log('Transaction status:', receipt.status)
+      console.log('Gas used:', receipt.gasUsed)
+      console.log('Effective gas price:', receipt.effectiveGasPrice)
+      
+      // Check balances after transfer
+      const fromBalanceAfter = await publicClient.readContract({
+        address: TOKEN_ADDRESS as `0x${string}`,
+        abi: ERC20_ABI,
+        functionName: 'balanceOf',
+        args: [account.address]
+      })
+      console.log(`From account balance after: ${formatEther(fromBalanceAfter as bigint)} tokens`)
+      
+      try {
+        const toBalanceAfter = await publicClient.readContract({
+          address: TOKEN_ADDRESS as `0x${string}`,
+          abi: ERC20_ABI,
+          functionName: 'balanceOf',
+          args: [to]
+        })
+        console.log(`To account balance after: ${formatEther(toBalanceAfter as bigint)} tokens`)
+        
+        // Calculate the difference
+        if (toBalanceBefore) {
+          const toBalanceDiff = (toBalanceAfter as bigint) - (toBalanceBefore as bigint)
+          console.log(`To account balance change: ${formatEther(toBalanceDiff)} tokens`)
+        }
+      } catch (error) {
+        console.log('Could not retrieve receiver balance after transaction')
+      }
+      
+      // Calculate sender balance difference
+      const fromBalanceDiff = (fromBalanceBefore as bigint) - (fromBalanceAfter as bigint)
+      console.log(`From account balance change: ${formatEther(fromBalanceDiff)} tokens`)
+      
+      if (receipt.status === 'success') {
+        console.log('Transfer completed successfully!')
+      } else {
+        console.log('Transfer failed!')
+      }
+    } catch (error) {
+      console.error('Error transferring tokens:', error)
+    }
+  }
+
+  // Approve a spender to use tokens
+  async function approveSpender(spender: `0x${string}`, amount: bigint) {
+    try {
+      console.log(`\nApprove ${formatEther(amount)} tokens for spender ${spender}`)
+      
+      // Check current allowance before approval
+      const currentAllowance = await publicClient.readContract({
+        address: TOKEN_ADDRESS as `0x${string}`,
+        abi: ERC20_ABI,
+        functionName: 'allowance',
+        args: [account.address, spender]
+      })
+      
+      console.log(`Current allowance before: ${formatEther(currentAllowance as bigint)} tokens`)
+      
+      // First approval: set allowance to 0
+      console.log('\n--- Step 1: Setting allowance to 0 ---')
+      const { request: requestZero } = await publicClient.simulateContract({
+        address: TOKEN_ADDRESS as `0x${string}`,
+        abi: ERC20_ABI,
+        functionName: 'approve',
+        args: [spender, 0n],
+        account,
+      })
+      
+      const hashZero = await walletClient.writeContract(requestZero)
+      console.log('Approval to zero transaction hash:', hashZero)
+      
+      // Wait for first transaction confirmation
+      console.log('Waiting for transaction confirmation...')
+      const receiptZero = await publicClient.waitForTransactionReceipt({ hash: hashZero })
+      console.log('Transaction confirmed!')
+      console.log('Block number:', receiptZero.blockNumber)
+      console.log('Transaction status:', receiptZero.status)
+      console.log('Gas used:', receiptZero.gasUsed)
+      console.log('Effective gas price:', receiptZero.effectiveGasPrice)
+      
+      // Check allowance after first approval
+      const allowanceAfterZero = await publicClient.readContract({
+        address: TOKEN_ADDRESS as `0x${string}`,
+        abi: ERC20_ABI,
+        functionName: 'allowance',
+        args: [account.address, spender]
+      })
+      console.log(`Allowance after setting to zero: ${formatEther(allowanceAfterZero as bigint)} tokens`)
+      
+      if (receiptZero.status === 'success') {
+        console.log('Approval to zero completed successfully!')
+      } else {
+        console.log('Approval to zero failed!')
+        return;
+      }
+      
+      // Second approval: set allowance to the desired amount
+      console.log('\n--- Step 2: Setting allowance to desired amount ---')
+      const { request } = await publicClient.simulateContract({
+        address: TOKEN_ADDRESS as `0x${string}`,
+        abi: ERC20_ABI,
+        functionName: 'approve',
+        args: [spender, amount],
+        account,
+      })
+      
+      const hash = await walletClient.writeContract(request)
+      console.log('Approval transaction hash:', hash)
+      
+      // Wait for second transaction confirmation
+      console.log('Waiting for transaction confirmation...')
+      const receipt = await publicClient.waitForTransactionReceipt({ hash })
+      console.log('Transaction confirmed!')
+      console.log('Block number:', receipt.blockNumber)
+      console.log('Transaction status:', receipt.status)
+      console.log('Gas used:', receipt.gasUsed)
+      console.log('Effective gas price:', receipt.effectiveGasPrice)
+      
+      // Check allowance after approval
+      const newAllowance = await publicClient.readContract({
+        address: TOKEN_ADDRESS as `0x${string}`,
+        abi: ERC20_ABI,
+        functionName: 'allowance',
+        args: [account.address, spender]
+      })
+      console.log(`New allowance after: ${formatEther(newAllowance as bigint)} tokens`)
+      
+      if (receipt.status === 'success') {
+        console.log('Approval completed successfully!')
+      } else {
+        console.log('Approval failed!')
+      }
+    } catch (error) {
+      console.error('Error approving spender:', error)
+    }
+  }
+
+  // Demonstrate all ERC20 operations
   console.log('=== ERC20 Token Operations Demo ===')
   
   // Get token balance
   await getTokenBalance()
   
   // Demonstrate transfer (to a sample address with correct checksum)
-  await transferTokens('0x976EA74026E726554dB657fA54763abd0C3a0aa9', parseEther('0.1'))
+  await transferTokens('0x976EA74026E726554dB657fA54763abd0C3a0aa9', parseEther('12.1'))
   
   // Demonstrate approval
-  await approveSpender('0x976EA74026E726554dB657fA54763abd0C3a0aa9', parseEther('1.0'))
+  await approveSpender('0x976EA74026E726554dB657fA54763abd0C3a0aa9', parseEther('44.4'))
 }
-
-demonstrateERC20Operations()

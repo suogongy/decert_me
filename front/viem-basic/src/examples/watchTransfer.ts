@@ -1,5 +1,5 @@
 import { createPublicClient, http, formatEther, decodeEventLog } from 'viem'
-import { mainnet } from 'viem/chains'
+import { mainnet, foundry } from 'viem/chains'
 import type { DecodeEventLogReturnType } from 'viem'
 
 // WETH token contract address on Ethereum mainnet
@@ -42,92 +42,96 @@ const ERC20_ABI = [
   },
 ] as const
 
-// Create public client
-const publicClient = createPublicClient({
-  chain: mainnet,
-  transport: http(import.meta.env.VITE_ETHEREUM_RPC_URL)
-})
-
-// 1. Watch ERC20 Transfer events
-async function watchTransferEvents() {
-  console.log('Watching for WETH Transfer events...')
+// Updated to accept parameters for interactive mode
+export async function runWatchTransfer(rpcUrl?: string, chainId?: string) {
+  console.log('=== Event Watching Demo ===')
   
-  try {
-    // Get token name
-    const name = await publicClient.readContract({
-      address: WETH_ADDRESS as `0x${string}`,
-      abi: ERC20_ABI,
-      functionName: 'name',
-    })
-    console.log(`Token name: ${name}`)
-  } catch (error) {
-    console.log('Could not get token name, using default')
+  // Determine chain based on chainId
+  let chain
+  if (chainId === '31337') {
+    chain = foundry
+  } else {
+    chain = mainnet
   }
+
+  // Use provided RPC URL or fall back to environment variable
+  const finalRpcUrl = rpcUrl || import.meta.env.VITE_ANVIL_RPC_URL
   
-  const unwatch = publicClient.watchContractEvent({
-    address: WETH_ADDRESS as `0x${string}`,
-    abi: ERC20_TRANSFER_EVENT_ABI,
-    eventName: 'Transfer',
-    onLogs: (logs) => {
-      console.log('\n=== New Transfer Event ===')
-      logs.forEach(log => {
-        // Decode the event log to access the args
-        const decodedLog = decodeEventLog({
-          abi: ERC20_TRANSFER_EVENT_ABI,
-          data: log.data,
-          topics: log.topics,
-        }) as DecodeEventLogReturnType<typeof ERC20_TRANSFER_EVENT_ABI>
-        
-        console.log('Block Number:', log.blockNumber)
-        console.log('From:', decodedLog.args.from)
-        console.log('To:', decodedLog.args.to)
-        console.log('Value:', formatEther(decodedLog.args.value), 'tokens')
-        console.log('Transaction Hash:', log.transactionHash)
-      })
-    },
+  const publicClient = createPublicClient({
+    chain: chain,
+    transport: http(finalRpcUrl)
   })
-  
-  console.log('Event listener started. Listening for Transfer events...')
-  console.log('Press Ctrl+C to stop.')
-  
-  // For demonstration purposes, we'll stop after 30 seconds
-  // In a real application, you would let this run indefinitely
-  setTimeout(() => {
-    console.log('Stopping event listener...')
-    unwatch()
-  }, 30000)
-}
 
-// 2. Get past Transfer events
-async function getPastTransferEvents() {
-  console.log('\n=== Getting Past Transfer Events ===')
+  console.log('Chain:', publicClient.chain.name)
+  console.log('RPC URL:', finalRpcUrl)
   
-  try {
-    const pastEvents = await publicClient.getContractEvents({
-      address: WETH_ADDRESS as `0x${string}`,
-      abi: ERC20_TRANSFER_EVENT_ABI,
-      eventName: 'Transfer',
-      fromBlock: 1n,
-      toBlock: 'latest',
-    })
+  // 1. Watch ERC20 Transfer events
+  async function watchTransferEvents() {
+    console.log('\n=== Watching Transfer Events ===')
+    console.log('Watching for new Transfer events (press Ctrl+C to stop)...')
     
-    console.log(`Found ${pastEvents.length} past Transfer events:`)
-    
-    // Display the first 5 events
-    pastEvents.slice(0, 5).forEach((event, index) => {
-      console.log(`\n--- Event ${index + 1} ---`)
-      console.log('Block Number:', event.blockNumber)
-      console.log('From:', event.args.from)
-      console.log('To:', event.args.to)
-      console.log('Value:', formatEther(event.args.value ?? 0n), 'tokens')
-    })
-  } catch (error) {
-    console.error('Error getting past events:', error)
+    try {
+      const unwatch = publicClient.watchContractEvent({
+        address: WETH_ADDRESS as `0x${string}`,
+        abi: ERC20_TRANSFER_EVENT_ABI,
+        eventName: 'Transfer',
+        onLogs: (logs: any[]) => {
+          console.log(`\n--- New Transfer Event ---`)
+          logs.forEach((log: any) => {
+            try {
+              const decodedLog = decodeEventLog({
+                abi: ERC20_TRANSFER_EVENT_ABI,
+                data: log.data,
+                topics: log.topics,
+              }) as DecodeEventLogReturnType<typeof ERC20_TRANSFER_EVENT_ABI, 'Transfer'>
+              
+              console.log('Block Number:', log.blockNumber)
+              console.log('From:', decodedLog.args.from)
+              console.log('To:', decodedLog.args.to)
+              console.log('Value:', formatEther(decodedLog.args.value ?? 0n), 'tokens')
+            } catch (decodeError) {
+              console.error('Error decoding log:', decodeError)
+            }
+          })
+        },
+      })
+      
+      // Return the unwatch function so it can be called to stop watching
+      return unwatch
+    } catch (error) {
+      console.error('Error watching events:', error)
+    }
   }
-}
 
-// Demonstrate event watching functionality
-async function demonstrateEventWatching() {
+  // 2. Get past Transfer events
+  async function getPastTransferEvents() {
+    console.log('\n=== Getting Past Transfer Events ===')
+    
+    try {
+      const pastEvents = await publicClient.getContractEvents({
+        address: WETH_ADDRESS as `0x${string}`,
+        abi: ERC20_TRANSFER_EVENT_ABI,
+        eventName: 'Transfer',
+        fromBlock: 1n,
+        toBlock: 'latest',
+      })
+      
+      console.log(`Found ${pastEvents.length} past Transfer events:`)
+      
+      // Display the first 5 events
+      pastEvents.slice(0, 5).forEach((event, index) => {
+        console.log(`\n--- Event ${index + 1} ---`)
+        console.log('Block Number:', event.blockNumber)
+        console.log('From:', event.args.from)
+        console.log('To:', event.args.to)
+        console.log('Value:', formatEther(event.args.value ?? 0n), 'tokens')
+      })
+    } catch (error) {
+      console.error('Error getting past events:', error)
+    }
+  }
+
+  // Demonstrate event watching functionality
   console.log('=== Event Watching Demo ===')
   
   // Get past events
@@ -136,5 +140,3 @@ async function demonstrateEventWatching() {
   // Watch for new events
   await watchTransferEvents()
 }
-
-demonstrateEventWatching()

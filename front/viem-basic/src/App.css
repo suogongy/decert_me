@@ -15,7 +15,7 @@
   filter: drop-shadow(0 0 2em #646cffaa);
 }
 .logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafba);
+  filter: drop-shadow(0 0 2em #61dafbaa);
 }
 
 @keyframes logo-spin {
@@ -35,29 +35,90 @@
 
 .card {
   padding: 2em;
-  margin: 1em 0;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .read-the-docs {
   color: #888;
 }
 
-/* Blockchain examples section */
-.card ul {
+/* Interactive card styles */
+.interactive-card {
   text-align: left;
-  max-width: 600px;
-  margin: 1em auto;
-  padding-left: 1.5em;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  margin-top: 2rem;
 }
 
-.card li {
-  margin-bottom: 0.5em;
+.config-section {
+  margin-bottom: 2rem;
+  padding: 1rem;
+  background-color: #e9e9e9;
+  border-radius: 4px;
 }
 
-.card h2 {
+.config-section h3 {
   margin-top: 0;
-  color: #333;
+}
+
+.input-group {
+  margin-bottom: 1rem;
+}
+
+.input-group label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: bold;
+}
+
+.input-group input {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+.examples-section h3 {
+  margin-top: 0;
+}
+
+.examples-section ul {
+  list-style: none;
+  padding: 0;
+}
+
+.examples-section li {
+  margin-bottom: 1rem;
+  padding: 1rem;
+  background-color: white;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.examples-section button {
+  background-color: #646cff;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.examples-section button:hover {
+  background-color: #535bf2;
+}
+
+.examples-section p {
+  margin: 0.5rem 0 0 0;
+  color: #666;
+}
+
+.running-example {
+  margin-top: 1rem;
+  padding: 1rem;
+  background-color: #e0ffe0;
+  border-radius: 4px;
+  border: 1px solid #0f0;
 }
