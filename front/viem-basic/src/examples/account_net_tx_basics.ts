@@ -1,6 +1,6 @@
 import { createWalletClient, createPublicClient, http, formatEther, parseEther } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
-import { mainnet, foundry } from 'viem/chains'
+import { foundry } from 'viem/chains'
 
 // Updated to accept parameters for interactive mode
 export async function runAccountBasics(rpcUrl?: string, privateKey?: string, chainId?: string) {

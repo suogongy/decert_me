@@ -1,5 +1,5 @@
 import { createPublicClient, http, formatEther, decodeEventLog } from 'viem'
-import { mainnet, foundry } from 'viem/chains'
+import { foundry } from 'viem/chains'
 import type { DecodeEventLogReturnType } from 'viem'
 
 // WETH token contract address on Ethereum mainnet
@@ -47,11 +47,16 @@ export async function runWatchTransfer(rpcUrl?: string, chainId?: string) {
   console.log('=== Event Watching Demo ===')
   
   // Determine chain based on chainId
+
+  if(chainId === undefined){
+    chainId = import.meta.env.VITE_ANVIL_CHAIN
+  }
+
   let chain
   if (chainId === '31337') {
     chain = foundry
   } else {
-    chain = mainnet
+    throw new Error('Invalid chainId')
   }
 
   // Use provided RPC URL or fall back to environment variable
@@ -70,6 +75,9 @@ export async function runWatchTransfer(rpcUrl?: string, chainId?: string) {
     console.log('\n=== Watching Transfer Events ===')
     console.log('Watching for new Transfer events (press Ctrl+C to stop)...')
     
+    // Create a persistent Set to track processed logs across multiple calls
+    const processedLogs = new Set<string>()
+    
     try {
       const unwatch = publicClient.watchContractEvent({
         address: WETH_ADDRESS as `0x${string}`,
@@ -79,12 +87,27 @@ export async function runWatchTransfer(rpcUrl?: string, chainId?: string) {
           console.log(`\n--- New Transfer Event ---`)
           logs.forEach((log: any) => {
             try {
+              // Create a unique identifier for the log
+              const logId = `${log.blockNumber}-${log.transactionHash}-${log.logIndex}`
+              
+              console.log('logId is:', logId)
+              
+              // Skip if we've already processed this log
+              if (processedLogs.has(logId)) {
+                console.log('Skipping duplicate log:', logId)
+                return
+              }
+              
+              // Mark this log as processed
+              processedLogs.add(logId)
+              
               const decodedLog = decodeEventLog({
                 abi: ERC20_TRANSFER_EVENT_ABI,
                 data: log.data,
                 topics: log.topics,
               }) as DecodeEventLogReturnType<typeof ERC20_TRANSFER_EVENT_ABI, 'Transfer'>
               
+              console.log('Address:', log.address)
               console.log('Block Number:', log.blockNumber)
               console.log('From:', decodedLog.args.from)
               console.log('To:', decodedLog.args.to)
@@ -119,7 +142,7 @@ export async function runWatchTransfer(rpcUrl?: string, chainId?: string) {
       console.log(`Found ${pastEvents.length} past Transfer events:`)
       
       // Display the first 5 events
-      pastEvents.slice(0, 5).forEach((event, index) => {
+      pastEvents.slice(0, 10).forEach((event, index) => {
         console.log(`\n--- Event ${index + 1} ---`)
         console.log('Block Number:', event.blockNumber)
         console.log('From:', event.args.from)
@@ -138,5 +161,14 @@ export async function runWatchTransfer(rpcUrl?: string, chainId?: string) {
   await getPastTransferEvents()
   
   // Watch for new events
-  await watchTransferEvents()
+  const unwatch = await watchTransferEvents()
+  
+  // Keep the process running for 60 seconds to listen for events
+  // In a real application, you might want to let this run indefinitely
+  setTimeout(() => {
+    if (unwatch) {
+      console.log('Stopping event listener...')
+      unwatch()
+    }
+  }, 60000)
 }

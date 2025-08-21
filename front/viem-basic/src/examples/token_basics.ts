@@ -220,7 +220,7 @@ export async function runTokenBasics(rpcUrl?: string, privateKey?: string, chain
   }
 
   // Use provided RPC URL or fall back to environment variable
-  const finalRpcUrl = rpcUrl || import.meta.env.VITE_ETHEREUM_RPC_URL
+  const finalRpcUrl = rpcUrl || import.meta.env.VITE_ANVIL_RPC_URL
   
   const publicClient = createPublicClient({
     chain: chain,

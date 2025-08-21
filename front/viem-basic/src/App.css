@@ -122,3 +122,32 @@
   border-radius: 4px;
   border: 1px solid #0f0;
 }
+
+/* 新增的布局样式 */
+.interactive-layout {
+  display: flex;
+  gap: 2rem;
+  align-items: flex-start;
+}
+
+.config-panel {
+  flex: 1;
+  min-width: 300px;
+}
+
+.examples-panel {
+  flex: 2;
+  min-width: 400px;
+}
+
+@media (max-width: 768px) {
+  .interactive-layout {
+    flex-direction: column;
+  }
+  
+  .config-panel,
+  .examples-panel {
+    min-width: unset;
+    width: 100%;
+  }
+}
