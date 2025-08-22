@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
+import "forge-std/console.sol";
 import "./IERC721.sol";
 
 /**
@@ -38,6 +39,7 @@ contract SimpleERC721 is IERC721 {
     constructor(string memory name_, string memory symbol_) {
         _name = name_;
         _symbol = symbol_;
+        console.log("SimpleERC721: Contract deployed with name %s and symbol %s", name_, symbol_);
     }
 
     /**
@@ -45,6 +47,7 @@ contract SimpleERC721 is IERC721 {
      * @return The name of the collection
      */
     function name() public view returns (string memory) {
+        console.log("SimpleERC721: name() called, returning %s", _name);
         return _name;
     }
 
@@ -53,6 +56,7 @@ contract SimpleERC721 is IERC721 {
      * @return The symbol of the collection
      */
     function symbol() public view returns (string memory) {
+        console.log("SimpleERC721: symbol() called, returning %s", _symbol);
         return _symbol;
     }
 
@@ -62,8 +66,10 @@ contract SimpleERC721 is IERC721 {
      * @return The number of tokens owned by the address
      */
     function balanceOf(address owner) public view override returns (uint256) {
+        console.log("SimpleERC721: balanceOf(%s) called", owner);
         require(owner != address(0), "ERC721: balance query for the zero address");
         uint256 balance = _balances[owner];
+        console.log("SimpleERC721: balanceOf(%s) returning %d", owner, balance);
         return balance;
     }
 
@@ -73,8 +79,10 @@ contract SimpleERC721 is IERC721 {
      * @return The address of the owner of the token
      */
     function ownerOf(uint256 tokenId) public view override returns (address) {
+        console.log("SimpleERC721: ownerOf(%d) called", tokenId);
         address owner = _owners[tokenId];
         require(owner != address(0), "ERC721: owner query for nonexistent token");
+        console.log("SimpleERC721: ownerOf(%d) returning %s", tokenId, owner);
         return owner;
     }
 
@@ -85,7 +93,10 @@ contract SimpleERC721 is IERC721 {
      * @param tokenId The ID of the token to transfer
      */
     function transferFrom(address from, address to, uint256 tokenId) public override {
+        console.log("SimpleERC721: transferFrom() called from %s to %s", from, to);
+        console.log("SimpleERC721: transferFrom() called with tokenId %d by caller %s", tokenId, msg.sender);
         require(_isApprovedOrOwner(msg.sender, tokenId), "ERC721: transfer caller is not owner nor approved");
+        console.log("SimpleERC721: Caller %s is approved or owner, proceeding with transfer", msg.sender);
         _transfer(from, to, tokenId);
     }
 
@@ -96,6 +107,8 @@ contract SimpleERC721 is IERC721 {
      * @param tokenId The ID of the token to transfer
      */
     function safeTransferFrom(address from, address to, uint256 tokenId) public override {
+        console.log("SimpleERC721: safeTransferFrom() called from %s to %s ", from, to);
+        console.log("SimpleERC721: safeTransferFrom() called with tokenId %d by caller %s",  tokenId, msg.sender);
         _safeTransferFrom(from, to, tokenId, "");
     }
 
@@ -107,6 +120,8 @@ contract SimpleERC721 is IERC721 {
      * @param data Additional data to send with the transfer
      */
     function safeTransferFrom(address from, address to, uint256 tokenId, bytes calldata data) public override {
+        console.log("SimpleERC721: safeTransferFrom() with data called from %s to %s ", from, to);
+        console.log("SimpleERC721: safeTransferFrom() with data called with tokenId %d by caller %s", tokenId, msg.sender);
 
         _safeTransferFrom(from, to, tokenId, data);
     }
@@ -117,9 +132,11 @@ contract SimpleERC721 is IERC721 {
      * @param tokenId The ID of the token to approve
      */
     function approve(address to, uint256 tokenId) public override {
+        console.log("SimpleERC721: approve() called by %s for address %s with tokenId %d", msg.sender, to, tokenId);
         address owner = ownerOf(tokenId);
         require(to != owner, "ERC721: approval to current owner");
         require(msg.sender == owner || isApprovedForAll(owner, msg.sender), "ERC721: approve caller is not owner nor approved for all");
+        console.log("SimpleERC721: Approval conditions met, proceeding with approval");
         _approve(to, tokenId);
     }
 
@@ -129,8 +146,10 @@ contract SimpleERC721 is IERC721 {
      * @return The approved address for the token
      */
     function getApproved(uint256 tokenId) public view override returns (address) {
+        console.log("SimpleERC721: getApproved(%d) called", tokenId);
         require(_exists(tokenId), "ERC721: approved query for nonexistent token");
         address approved = _tokenApprovals[tokenId];
+        console.log("SimpleERC721: getApproved(%d) returning %s", tokenId, approved);
         return approved;
     }
 
@@ -140,8 +159,15 @@ contract SimpleERC721 is IERC721 {
      * @param approved True if the operator is approved, false to revoke approval
      */
     function setApprovalForAll(address operator, bool approved) public override {
+        console.log("SimpleERC721: setApprovalForAll() called by");
+        console.logAddress(msg.sender);
+        console.log("for operator");
+        console.logAddress(operator);
+        console.log("approved:");
+        console.log(approved ? "true" : "false");
         require(operator != msg.sender, "ERC721: approve to caller");
         _operatorApprovals[msg.sender][operator] = approved;
+        console.log("SimpleERC721: Operator approval set");
         emit ApprovalForAll(msg.sender, operator, approved);
     }
 
@@ -152,7 +178,13 @@ contract SimpleERC721 is IERC721 {
      * @return True if the operator is approved, false otherwise
      */
     function isApprovedForAll(address owner, address operator) public view override returns (bool) {
+        console.log("SimpleERC721: isApprovedForAll() called for owner");
+        console.logAddress(owner);
+        console.log("and operator");
+        console.logAddress(operator);
         bool approved = _operatorApprovals[owner][operator];
+        console.log("SimpleERC721: isApprovedForAll() returning");
+        console.log(approved ? "true" : "false");
         return approved;
     }
 
@@ -162,8 +194,10 @@ contract SimpleERC721 is IERC721 {
      * @param tokenId The ID of the token to mint
      */
     function mint(address to, uint256 tokenId) public {
+        console.log("SimpleERC721: mint() called by %s to address %s with tokenId %d", msg.sender, to, tokenId);
         require(to != address(0), "ERC721: mint to the zero address");
         require(!_exists(tokenId), "ERC721: token already minted");
+        console.log("SimpleERC721: Mint conditions met, proceeding with mint");
         _mint(to, tokenId);
     }
 
@@ -174,6 +208,7 @@ contract SimpleERC721 is IERC721 {
      */
     function _exists(uint256 tokenId) internal view returns (bool) {
         bool exists = _owners[tokenId] != address(0);
+        console.log("SimpleERC721: _exists(%d) called, returning %s", tokenId, exists ? "true" : "false");
         return exists;
     }
 
@@ -183,8 +218,10 @@ contract SimpleERC721 is IERC721 {
      * @param tokenId The ID of the token to mint
      */
     function _mint(address to, uint256 tokenId) internal {
+        console.log("SimpleERC721: _mint() internal function minting to %s with tokenId %d", to, tokenId);
         _balances[to] += 1;
         _owners[tokenId] = to;
+        console.log("SimpleERC721: Balance of %s after mint: %d", to, _balances[to]);
         emit Transfer(address(0), to, tokenId);
     }
 
@@ -195,15 +232,19 @@ contract SimpleERC721 is IERC721 {
      * @param tokenId The ID of the token to transfer
      */
     function _transfer(address from, address to, uint256 tokenId) internal {
+        console.log("SimpleERC721: _transfer() internal function from %s to %s with tokenId %d", from, to, tokenId);
         require(ownerOf(tokenId) == from, "ERC721: transfer of token that is not own");
         require(to != address(0), "ERC721: transfer to the zero address");
 
         // Clear approvals
+        console.log("SimpleERC721: Clearing approvals for tokenId %d", tokenId);
         _approve(address(0), tokenId);
 
         _balances[from] -= 1;
         _balances[to] += 1;
         _owners[tokenId] = to;
+        console.log("SimpleERC721: Balance of sender %s after transfer: %d", from, _balances[from]);
+        console.log("SimpleERC721: Balance of receiver %s after transfer: %d", to, _balances[to]);
 
         emit Transfer(from, to, tokenId);
     }
@@ -217,7 +258,9 @@ contract SimpleERC721 is IERC721 {
      * @param _data Additional data to send with the transfer
      */
     function _safeTransferFrom(address from, address to, uint256 tokenId, bytes memory _data) internal {
+        console.log("SimpleERC721: _safeTransferFrom() internal function from %s to %s with tokenId %d", from, to, tokenId);
         require(_isApprovedOrOwner(msg.sender, tokenId), "ERC721: transfer caller is not owner nor approved");
+        console.log("SimpleERC721: Caller %s is approved or owner, proceeding with safe transfer", msg.sender);
         _transfer(from, to, tokenId);
         // In a full implementation, we would check if the receiver implements onERC721Received
         // For simplicity, we'll skip that check in this implementation
@@ -230,12 +273,21 @@ contract SimpleERC721 is IERC721 {
      * @return True if the address is approved or is the owner, false otherwise
      */
     function _isApprovedOrOwner(address spender, uint256 tokenId) internal view returns (bool) {
+        console.log("SimpleERC721: _isApprovedOrOwner() called for spender");
+        console.logAddress(spender);
+        console.log("with tokenId");
+        console.logUint(tokenId);
         require(_exists(tokenId), "ERC721: operator query for nonexistent token");
         address owner = ownerOf(tokenId);
         bool isOwner = (spender == owner);
         bool isApproved = (getApproved(tokenId) == spender);
         bool isOperator = isApprovedForAll(owner, spender);
         bool result = (isOwner || isApproved || isOperator);
+        console.log("SimpleERC721: _isApprovedOrOwner() result:");
+        console.log("- isOwner: %s",isOwner ? "true" : "false");
+        console.log("- isApproved: %s",isApproved ? "true" : "false");
+        console.log("- isOperator: %s", isOperator ? "true" : "false");
+        console.log("- overall: %s",result ? "true" : "false");
         return result;
     }
     
@@ -245,7 +297,9 @@ contract SimpleERC721 is IERC721 {
      * @param tokenId The ID of the token to approve
      */
     function _approve(address to, uint256 tokenId) internal {
+        console.log("SimpleERC721: _approve() internal function approving %s for tokenId %d", to, tokenId);
         _tokenApprovals[tokenId] = to;
+        console.log("SimpleERC721: Approval set for tokenId %d to address %s", tokenId, to);
         emit Approval(ownerOf(tokenId), to, tokenId);
     }
 }

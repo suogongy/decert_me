@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
+import "forge-std/console.sol";
 import "./IERC721.sol";
 import "./IExtendedERC20.sol";
 import "./ITokenReceiver.sol";
@@ -58,35 +59,46 @@ contract NFTMarket is ITokenReceiver {
      * @param data Additional data (contains listing ID to purchase)
      */
     function onTokensReceived(address sender, address, uint256 amount, bytes calldata data) external override {
+        console.log("NFTMarket: onTokensReceived() called by %s with amount %d", sender, amount);
         // When tokens are received, try to buy an NFT with them
         uint256 listingId = abi.decode(data, (uint256));
+        console.log("NFTMarket: Decoded listingId: %d", listingId);
         
         // Get the listing details
         Listing storage listing = listings[listingId];
         
         // Check if listing exists and is active
         if (listing.tokenAddress == address(0)) {
+            console.log("NFTMarket: Listing %d does not exist", listingId);
             revert ListingDoesNotExist(listingId);
         }
         
         if (!listing.active) {
+            console.log("NFTMarket: Listing %d is not active", listingId);
             revert ListingNotActive(listingId);
         }
 
         // Check if the amount matches the listing price
         if (amount != listing.price) {
+            console.log("NFTMarket: Incorrect amount. Provided: %d, Required: %d", amount, listing.price);
             revert InsufficientPayment(amount, listing.price);
         }
 
+        console.log("NFTMarket: All conditions met, proceeding with token purchase");
         listing.active = false;
         
         // Transfer NFT to the token sender (the one who initiated the token transfer)
+        console.log("NFTMarket: Transferring NFT to token sender %s", sender);
         IERC721(listing.tokenAddress).transferFrom(address(this), sender, listing.tokenId);
+        console.log("NFTMarket: NFT transfer completed");
         
         // Transfer tokens from this contract to seller
+        console.log("NFTMarket: Transferring %d tokens from this contract to seller %s", amount, listing.seller);
         IExtendedERC20(msg.sender).transfer(listing.seller, amount);
+        console.log("NFTMarket: Token transfer completed");
         
         emit NFTPurchased(listingId, sender);
+        console.log("NFTMarket: NFT purchased successfully with tokens");
     }
 
     /**
@@ -105,10 +117,15 @@ contract NFTMarket is ITokenReceiver {
      * - Emits an NFTListed event
      */
     function listNFT(address tokenAddress, uint256 tokenId, uint256 price) external {
+        console.log("NFTMarket: listNFT() called by %s for token %s:%d", msg.sender, tokenAddress, tokenId);
+        console.log("NFTMarket: listNFT()  with price %d", price);
         // Transfer NFT to market contract
+        console.log("NFTMarket: Transferring NFT from %s to market contract", msg.sender);
         IERC721(tokenAddress).transferFrom(msg.sender, address(this), tokenId);
+        console.log("NFTMarket: NFT transfer completed");
         
         // Create listing
+        console.log("NFTMarket: Creating listing with ID %d", nextListingId);
         listings[nextListingId] = Listing({
             tokenId: tokenId,
             tokenAddress: tokenAddress,
@@ -118,6 +135,7 @@ contract NFTMarket is ITokenReceiver {
         });
 
         emit NFTListed(nextListingId, tokenAddress, tokenId, price, msg.sender);
+        console.log("NFTMarket: Listing created successfully with ID %d", nextListingId);
         nextListingId++;
     }
 
@@ -136,26 +154,34 @@ contract NFTMarket is ITokenReceiver {
      * - Emits an NFTDelisted event
      */
     function delistNFT(uint256 listingId) external {
+        console.log("NFTMarket: delistNFT() called by %s for listing ID %d", msg.sender, listingId);
         Listing storage listing = listings[listingId];
         
         if (listing.tokenAddress == address(0)) {
+            console.log("NFTMarket: Listing %d does not exist", listingId);
             revert ListingDoesNotExist(listingId);
         }
         
         if (listing.seller != msg.sender) {
+            console.log("NFTMarket: Caller %s is not the seller %s", msg.sender, listing.seller);
             revert NotSeller(msg.sender, listingId);
         }
         
         if (!listing.active) {
+            console.log("NFTMarket: Listing %d is not active", listingId);
             revert ListingNotActive(listingId);
         }
 
+        console.log("NFTMarket: All conditions met, delisting NFT");
         listing.active = false;
         
         // Transfer NFT back to seller
+        console.log("NFTMarket: Transferring NFT back to seller %s", msg.sender);
         IERC721(listing.tokenAddress).transferFrom(address(this), msg.sender, listing.tokenId);
+        console.log("NFTMarket: NFT transfer completed");
         
         emit NFTDelisted(listingId);
+        console.log("NFTMarket: NFT delisted successfully");
     }
 
     /**
@@ -175,35 +201,47 @@ contract NFTMarket is ITokenReceiver {
      * - Emits an NFTPurchased event
      */
     function buyNFT(uint256 listingId) external payable {
+        console.log("NFTMarket: buyNFT() called by %s for listing ID %d with %d ETH", msg.sender, listingId, msg.value);
         Listing storage listing = listings[listingId];
         
         if (listing.tokenAddress == address(0)) {
+            console.log("NFTMarket: Listing %d does not exist", listingId);
             revert ListingDoesNotExist(listingId);
         }
         
         if (!listing.active) {
+            console.log("NFTMarket: Listing %d is not active", listingId);
             revert ListingNotActive(listingId);
         }
 
         if (msg.value < listing.price) {
+            console.log("NFTMarket: Insufficient ETH sent. Sent: %d, Required: %d", msg.value, listing.price);
             revert InsufficientPayment(msg.value, listing.price);
         }
 
+        console.log("NFTMarket: All conditions met, proceeding with purchase");
         listing.active = false;
         
         // Transfer NFT to buyer
+        console.log("NFTMarket: Transferring NFT to buyer %s", msg.sender);
         IERC721(listing.tokenAddress).transferFrom(address(this), msg.sender, listing.tokenId);
+        console.log("NFTMarket: NFT transfer completed");
         
         // Transfer ETH to seller
+        console.log("NFTMarket: Transferring %d ETH to seller %s", listing.price, listing.seller);
         _safeTransferETH(listing.seller, listing.price);
+        console.log("NFTMarket: ETH transfer completed");
         
         // Refund excess ETH to buyer
         if (msg.value > listing.price) {
             uint256 refund = msg.value - listing.price;
+            console.log("NFTMarket: Refunding %d ETH to buyer %s", refund, msg.sender);
             _safeTransferETH(msg.sender, refund);
-            }
+            console.log("NFTMarket: Refund completed");
+        }
         
         emit NFTPurchased(listingId, msg.sender);
+        console.log("NFTMarket: NFT purchased successfully");
     }
 
     /**
@@ -225,30 +263,41 @@ contract NFTMarket is ITokenReceiver {
      * - Emits an NFTPurchased event
      */
     function buyNFTWithToken(uint256 listingId, address paymentTokenAddress, uint256 amount) external {
+        console.log("NFTMarket: buyNFTWithToken() called by %s for listing ID %d with token %s", msg.sender, listingId, paymentTokenAddress);
+        console.log("NFTMarket: buyNFTWithToken() called amount %d", amount);
 
         Listing storage listing = listings[listingId];
         
         if (listing.tokenAddress == address(0)) {
+            console.log("NFTMarket: Listing %d does not exist", listingId);
             revert ListingDoesNotExist(listingId);
         }
         
         if (!listing.active) {
+            console.log("NFTMarket: Listing %d is not active", listingId);
             revert ListingNotActive(listingId);
         }
 
         if (amount != listing.price) {
+            console.log("NFTMarket: Incorrect amount. Provided: %d, Required: %d", amount, listing.price);
             revert InsufficientPayment(amount, listing.price);
         }
 
+        console.log("NFTMarket: All conditions met, proceeding with token purchase");
         listing.active = false;
         
         // Transfer NFT to buyer (msg.sender)
+        console.log("NFTMarket: Transferring NFT to buyer %s", msg.sender);
         IERC721(listing.tokenAddress).transferFrom(address(this), msg.sender, listing.tokenId);
+        console.log("NFTMarket: NFT transfer completed");
         
         // Transfer tokens from buyer (msg.sender) to seller
+        console.log("NFTMarket: Transferring %d tokens from buyer %s to seller %s", amount, msg.sender, listing.seller);
         IExtendedERC20(paymentTokenAddress).transferFrom(msg.sender, listing.seller, amount);
+        console.log("NFTMarket: Token transfer completed");
         
         emit NFTPurchased(listingId, msg.sender);
+        console.log("NFTMarket: NFT purchased successfully with tokens");
     }
 
     /**
@@ -257,7 +306,9 @@ contract NFTMarket is ITokenReceiver {
      * @param amount The amount of ETH to transfer
      */
     function _safeTransferETH(address to, uint256 amount) internal {
+        console.log("NFTMarket: _safeTransferETH() transferring %d ETH to %s", amount, to);
         (bool success, ) = payable(to).call{value: amount}("");
+        console.log("NFTMarket: ETH transfer result: %s", success ? "success" : "failed");
         require(success, "ETH transfer failed");
     }
 
@@ -266,5 +317,6 @@ contract NFTMarket is ITokenReceiver {
      * This is needed for refunding excess ETH when buying NFTs
      */
     receive() external payable {
+        console.log("NFTMarket: Received %d ETH", msg.value);
     }
 }
